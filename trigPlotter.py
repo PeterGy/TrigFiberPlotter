@@ -3,18 +3,12 @@ yfile = 'Data/Oct20_51.txt'
 
 from pylab import *
 from numpy import *
-
-
-#200 events, 192 lines
 #python has matrices y,x
 
-#first 5000, last 5000
-
-# def mirror(y):
-#   return list(flip(y[0:32]))+list(flip(y[32:64]))+list(flip(y[64:96]))+list(flip(y[96:128]))+list(flip(y[128:160]))+list(flip(y[160:192]))
 
 def mirror(y):
-  return list(reverse(y[0:32]))+list(reverse(y[32:64]))+list(reverse(y[64:96]))+list(reverse(y[96:128]))+list(reverse(y[128:160]))+list(reverse(y[160:192]))
+  return list(flip(y[0:32]))+list(flip(y[32:64]))+list(flip(y[64:96]))+list(flip(y[96:128]))+list(flip(y[128:160]))+list(flip(y[160:192]))
+
 
 
 def load_data(file):
@@ -49,7 +43,6 @@ def veto_ambiguous_events(data):
 
 
 datax = load_data(xfile)
-#print("raw event entries in x",len(datax))
 datax = process_data(datax)
 print("actual event entries in x     ",len(datax))
 datax = veto_ambiguous_events(datax)
@@ -62,67 +55,65 @@ datay = veto_ambiguous_events(datay)
 print("unambiguous event entries in y",len(datay))
 #print(datax)
 
-dt=1e-7 #maximum time difference between pairs
-
-pairs=[]
-ix=0
-iy=0
-thrown_event_count=0
 
 
-while ix < len(datax)-1 and iy < len(datay)-1:
-  if datax[ix][0] < datay[iy][0]-dt:
-    ix+=1
-    thrown_event_count+=1
-  elif (datay[iy][0]-dt < datax[ix][0] and datax[ix][0] < datay[iy][0]+dt) or datay[iy][0] == datax[ix][0]:
-    #print("succesfully paired with time difference of "+ str(datay[iy][0]-datax[ix][0]))
-    pairs.append([datax[ix],datay[iy]])
-    ix+=1;iy+=1;  
-  elif datay[iy][0]+dt < datax[ix][0] :
-    iy+=1    
-    thrown_event_count+=1
-  # elif datay[iy][0] == datax[ix][0]:
-  #   pairs.append([datax[ix],datay[iy]])
-  #   ix+=1;iy+=1; 
-  else: 
-    print(datay[iy][0], datax[ix][0])
-    print(datay[iy][0]- datax[ix][0])
+def pair_up(datax,datay):
+  dt=1e-7 #maximum time difference between pairs
+  pairs=[]
+  ix=0
+  iy=0
+  thrown_event_count=0
+  #pairs up events based on time difference
+  while ix < len(datax)-1 and iy < len(datay)-1: 
+    if datax[ix][0] < datay[iy][0]-dt:
+      ix+=1
+      thrown_event_count+=1
+    elif (datay[iy][0]-dt < datax[ix][0] and datax[ix][0] < datay[iy][0]+dt) or datay[iy][0] == datax[ix][0]:
+      #print("succesfully paired with time difference of "+ str(datay[iy][0]-datax[ix][0]))
+      pairs.append([datax[ix],datay[iy]])
+      ix+=1;iy+=1;  
+    elif datay[iy][0]+dt < datax[ix][0] :
+      iy+=1    
+      thrown_event_count+=1
+    else: 
+      print(datay[iy][0], datax[ix][0])
+      print(datay[iy][0]- datax[ix][0])
+      print(ix,iy)      
+      raise("eternal loop yo")  
 
-    print(ix,iy)
-    
-    raise("eternal loop yo")  
+  print("Number of corellatabale event pairs",len(pairs))
+  #print("Number of uncorellatabale events",thrown_event_count)
+  Matrix = [[0 for x in datax[0][1]] for x in datax[0][1]]
+
+  for pair in pairs: 
+    eventx=pair[0][1]
+    eventx=list(eventx)
+    eventx=mirror(eventx)
+    eventy=pair[1][1]
+    eventy=list(eventy)
+    eventy=mirror(eventy)
+    Matrix[eventy.index("1")][eventx.index("1")] +=1
+
+  Matrix=[i[3*16:9*16] for i in Matrix[3*16:9*16]] #crops off blank channels
+  return Matrix  
 
 
-Matrix = [[0 for x in datax[0][1]] for x in datax[0][1]]
-
-for pair in pairs:
-  eventx=pair[0][1]
-  eventx=list(eventx)
-  eventx=mirror(eventx)
-  eventy=pair[1][1]
-  eventy=list(eventy)
-  eventy=mirror(eventy)
-  Matrix[eventy.index("1")][eventx.index("1")] +=1
-
-
-
-Matrix=[i[3*16:9*16] for i in Matrix[3*16:9*16]]
+Matrix = pair_up(datax,datay)
 
 matshow(Matrix,cmap=get_cmap("BuPu"))
-#print("Number of uncorellatabale events",thrown_event_count)
-print("Number of corellatabale events",len(pairs))
 
-# for pair in pairs: print(pair[0][0]-pair[1][0])
+
+
 
 x=range(len(Matrix))
 y=[sum(i) for i in Matrix]
 bar(x,y,width=1)
-show()
+#show()
 
 MT=array(Matrix).transpose()
 y2=[sum(i) for i in MT]
 barh(x,y2,height=1)
-show()
+#show()
 
 def scatter_hist(x, y, ax, ax_histx, ax_histy,Matrix):
     # no labels
@@ -134,10 +125,6 @@ def scatter_hist(x, y, ax, ax_histx, ax_histy,Matrix):
     ax.matshow(Matrix,cmap=get_cmap("BuPu"))
     ax.tick_params(axis="x", labelbottom=True)
     yticks([20,40,60,80,100])
-
-    # xticks([20,40,60,80,100])
-
-    # ax.colorbar()
 
     ax_histx.bar(range(len(x)),x,width=1,color="darkorchid")
     ax_histy.barh(range(len(y)),y,height=1,color="darkorchid")
@@ -172,10 +159,6 @@ ax_histy = fig.add_axes(rect_histy, sharey=ax)
 xlabel("Hits")
 
 
-# use the previously defined function
-
-#x=draw_fibers(file="test50.txt")
-#y=draw_fibers(file="test51.txt")
 
 scatter_hist(y, y2, ax, ax_histx, ax_histy, Matrix)
 
@@ -185,4 +168,4 @@ scatter_hist(y, y2, ax, ax_histx, ax_histy, Matrix)
 #
 
 savefig("Plots/plot.png",dpi=300)
-show()
+#show()
