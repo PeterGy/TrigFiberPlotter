@@ -1,5 +1,6 @@
 from pylab import *
 from numpy import *
+from optparse import OptionParser
 #python has matrices y,x
 
 
@@ -57,15 +58,14 @@ def pair_up(datax,datay):
       print(datay[iy][0], datax[ix][0])
       print(datay[iy][0]- datax[ix][0])
       print(ix,iy)      
-      raise("eternal loop yo")  
+      raise("An eternal loop has occured")  
 
-  print("Number of corellatabale event pairs",len(pairs))
+  print("number of corellatabale event pairs",len(pairs))
   #print("Number of uncorellatabale events",thrown_event_count)
   return pairs
 
 def create_plot_data(pairs):
-  Matrix = [[0 for x in datax[0][1]] for x in datax[0][1]]
-  if len(pairs)>100000: print("Processing "+str(len(pairs))+" pairs. This will take a while.")
+  matrix = [[0 for x in pairs[0][0][1]] for x in pairs[0][1][1]] #make a matrix that is nfibersx by nfibersy of the first pair
   for pair in pairs: #reorders channels so that they are actually in order. Takes a long time for large samples
     eventx=pair[0][1]
     eventx=list(eventx)
@@ -73,25 +73,22 @@ def create_plot_data(pairs):
     eventy=pair[1][1]
     eventy=list(eventy)
     eventy=mirror(eventy)
-    Matrix[eventy.index("1")][eventx.index("1")] +=1
+    matrix[eventy.index("1")][eventx.index("1")] +=1
 
-  Matrix=[i[3*16:9*16] for i in Matrix[3*16:9*16]] #crops off blank channels
-  return Matrix  
+  matrix=[i[3*16:9*16] for i in matrix[3*16:9*16]] #crops off blank channels
+  return matrix  
 
-def make_mystical_plot(Matrix):
+def make_mystical_plot(matrix):
   #create plotting based on poorly understood and even more poorly explained matplotlib example
-  x=range(len(Matrix))
-  y=[sum(i) for i in Matrix]
-  y2=[sum(i) for i in array(Matrix).transpose()]
+  x=range(len(matrix))
+  y=[sum(i) for i in matrix]
+  y2=[sum(i) for i in array(matrix).transpose()]
 
-  def scatter_hist(x, y, ax, ax_histx, ax_histy,Matrix):
+  def scatter_hist(x, y, ax, ax_histx, ax_histy,matrix):
       # no labels
       ax_histx.tick_params(axis="x", labelbottom=False)
       ax_histy.tick_params(axis="y", labelleft=False)
-
-
-
-      ax.matshow(Matrix,cmap=get_cmap("BuPu"))
+      ax.matshow(matrix,cmap=get_cmap("BuPu"))
       ax.tick_params(axis="x", labelbottom=True)
       yticks([20,40,60,80,100])
 
@@ -119,7 +116,7 @@ def make_mystical_plot(Matrix):
   ax_histy = fig.add_axes(rect_histy, sharey=ax)
   xlabel("Hits")
 
-  scatter_hist(y, y2, ax, ax_histx, ax_histy, Matrix)
+  scatter_hist(y, y2, ax, ax_histx, ax_histy, matrix)
   savefig("Plots/plot.png",dpi=300)
 
 
@@ -141,10 +138,16 @@ def main(options):
   datay = veto_ambiguous_events(datay)
   print("unambiguous event entries in y",len(datay))
 
-
   pairs = pair_up(datax,datay)
-  Matrix = create_plot_data(datax,datay)
-  make_mystical_plot(Matrix)
+
+  if len(pairs)>100000: print("Processing "+str(len(pairs))+" pairs. This will take a while.")
+  matrix = create_plot_data(pairs)
+  print("all data processed; creating plot")
+  make_mystical_plot(matrix)
+  print("plot has been created")
+
+
+
 
 
 if __name__=="__main__":
@@ -153,3 +156,6 @@ if __name__=="__main__":
   parser.add_option('-y','--yfibers', dest='y', default = "Oct20_51.txt" ,help='The name of the txt file that has the y fibers')
   options = parser.parse_args()[0]
   main(options)
+
+
+  #might wanna make plots interactive, here's a link for that https://stackoverflow.com/questions/4348733/saving-interactive-matplotlib-figures
