@@ -10,11 +10,12 @@ def mirror(y):
 def load_data(file):
   data = open(file, "r") #loads file
   data=data.read()       #reads file
-  data=data.split("\n")[0:-2] #turn one giant string into a list of line strings. The last line is "" and drops it.
+  data=data.split("\n")  #turn one giant string into a list of line strings. 
   return data
 
 def process_data(data): #turns data from a string of "s 8ns fibre" to (time,fiber)
   processed_data=[]
+  spill_times=[]
   line_count=0
   for line in data:
     try: 
@@ -24,8 +25,10 @@ def process_data(data): #turns data from a string of "s 8ns fibre" to (time,fibe
       fibers=line.split(" ")[2]
       processed_data.append([time,fibers]) 
       line_count+=1
-    except: pass #blank lines in data that would otherwise crash program
-  return processed_data
+    except: 
+      if line == "NEW SPILL": spill_times.append(processed_data[-1][0])         
+      else: pass #ignores blank lines or corrupted lines in data that would otherwise crash program
+  return processed_data#,spill_times
 
 def veto_ambiguous_events(data):
   processed_data=[]
@@ -90,7 +93,7 @@ def make_mystical_plot(matrix):
       ax_histy.tick_params(axis="y", labelleft=False)
       ax.matshow(matrix,cmap=get_cmap("BuPu"))
       ax.tick_params(axis="x", labelbottom=True)
-      yticks([20,40,60,80,100])
+      #yticks([20,40,60,80,100])
 
       ax_histx.bar(range(len(x)),x,width=1,color="darkorchid")
       ax_histy.barh(range(len(y)),y,height=1,color="darkorchid")
@@ -142,10 +145,12 @@ def main(options):
 
   if len(pairs)>100000: print("Processing "+str(len(pairs))+" pairs. This will take a while.")
   matrix = create_plot_data(pairs)
+
   print("all data processed; creating plot")
   make_mystical_plot(matrix)
   print("plot has been created")
-
+  print("an interactive plot window is being opened (or at least attempted)")
+  show()
 
 
 
