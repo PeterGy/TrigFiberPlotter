@@ -34,7 +34,7 @@ def process_data(data): #turns data from a string of "s 8ns fibre" to (time,fibe
           next_line_is_time_of_spill = False
       except: 
         pass #print("corrupted line") #ignores blank lines or corrupted lines in data that would otherwise crash program
-  return processed_data#,spill_times
+  return processed_data,spill_times
 
 def veto_ambiguous_events(data):
   processed_data=[]
@@ -73,7 +73,7 @@ def pair_up(datax,datay):
   #print("Number of uncorellatabale events",thrown_event_count)
   return pairs
 
-def create_plot_data(pairs):
+def create_plot_data_old(pairs):
   matrix = [[0 for x in pairs[0][0][1]] for x in pairs[0][1][1]] #make a matrix that is nfibersx by nfibersy of the first pair
   for pair in pairs: #reorders channels so that they are actually in order. Takes a long time for large samples
     eventx=pair[0][1]
@@ -85,6 +85,21 @@ def create_plot_data(pairs):
     matrix[eventy.index("1")][eventx.index("1")] +=1
 
   matrix=[i[3*16:9*16] for i in matrix[3*16:9*16]] #crops off blank channels
+  return matrix  
+
+def create_plot_data(pairs): #  A much faster and smarter way of mirroring the beam, but only if there is just one fiber activated per event
+  matrix = [[0 for x in pairs[0][0][1]] for x in pairs[0][1][1]] #make a matrix that is nfibersx by nfibersy of the first pair
+  for pair in pairs: #reorders channels so that they are actually in order. Takes a long time for large samples
+    eventx=pair[0][1] #crops off some zeros for 30% speed increase
+    hitLocationx = eventx.find("1")
+    hitLocationx = hitLocationx - hitLocationx%32 + (32 - hitLocationx%32)
+
+    eventy=pair[1][1] #crops off some zeros for 30% speed increase
+    hitLocationy = eventy.find("1")
+    hitLocationy = hitLocationy - hitLocationy%32 + (32 - hitLocationy%32)
+    matrix[hitLocationy][hitLocationx] +=1
+
+  matrix=[i[3*16:9*16] for i in matrix[3*16:9*16]] #crops off more blank channels
   return matrix  
 
 def make_mystical_plot(matrix):
@@ -136,18 +151,22 @@ def main(options):
   yfile = 'Data/'+options.y
 
   datax = load_data(xfile)
-  datax = process_data(datax)
+  datax,spillsx = process_data(datax)
   print("actual event entries in x     ",len(datax))
   datax = veto_ambiguous_events(datax)
   print("unambiguous event entries in x",len(datax))
 
   datay = load_data(yfile)
-  datay = process_data(datay)
+  datay,spillsy  = process_data(datay)
   print("actual event entries in y     ",len(datay))
   datay = veto_ambiguous_events(datay)
   print("unambiguous event entries in y",len(datay))
 
+  #print("le spills do be",spillsx,spillsy)
+
   pairs = pair_up(datax,datay)
+
+
 
   if len(pairs)>100000: print("Processing "+str(len(pairs))+" pairs. This will take a while.")
   matrix = create_plot_data(pairs)
@@ -156,6 +175,7 @@ def main(options):
   make_mystical_plot(matrix)
   print("plot has been created")
   print("an interactive plot window is being opened (or at least attempted)")
+
   show()
 
 
