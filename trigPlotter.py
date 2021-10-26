@@ -17,17 +17,23 @@ def process_data(data): #turns data from a string of "s 8ns fibre" to (time,fibe
   processed_data=[]
   spill_times=[]
   line_count=0
+  next_line_is_time_of_spill = False
   for line in data:
-    try: 
-      s=int(line.split(" ")[1])    
-      ns=int(line.split(" ")[0])
-      time= ns*8*1e-9 + s
-      fibers=line.split(" ")[2]
-      processed_data.append([time,fibers]) 
-      line_count+=1
-    except: 
-      if line == "NEW SPILL": spill_times.append(processed_data[-1][0])         
-      else: pass #ignores blank lines or corrupted lines in data that would otherwise crash program
+    if line == "NEW SPILL": 
+      next_line_is_time_of_spill = True
+    else:
+      try: 
+        s=int(line.split(" ")[1])    
+        ns=int(line.split(" ")[0])
+        time= ns*8*1e-9 + s
+        fibers=line.split(" ")[2]
+        processed_data.append([time,fibers]) 
+        line_count+=1
+        if next_line_is_time_of_spill:
+          spill_times.append(time)
+          next_line_is_time_of_spill = False
+      except: 
+        pass #print("corrupted line") #ignores blank lines or corrupted lines in data that would otherwise crash program
   return processed_data#,spill_times
 
 def veto_ambiguous_events(data):
